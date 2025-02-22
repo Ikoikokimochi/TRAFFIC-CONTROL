@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Traffic Light Configuration</title>
+  <style>
+    /* Dark theme styling */
+    body { margin: 0; padding: 0; background-color: #121212; color: #e0e0e0; font-family: Arial, sans-serif; }
+    .container { max-width: 800px; margin: 40px auto; background: #1e1e1e; padding: 20px; border-radius: 10px; box-shadow: 0px 4px 8px rgba(0,0,0,0.5); }
+    h1 { text-align: center; color: #ffffff; }
+    h2 { color: #ffffff; margin-bottom: 10px; border-bottom: 2px solid #3498db; padding-bottom: 5px; }
+    .form-row { display: flex; gap: 10px; margin-bottom: 15px; }
+    .form-row > div { flex: 1; }
+    label { display: block; margin-bottom: 5px; }
+    input[type="number"], input[type="text"], input[type="time"], input[type="date"] {
+      width: 100%; padding: 8px; border: 1px solid #555; border-radius: 4px; background: #2c2c2c; color: #e0e0e0;
+    }
+    select {
+      width: 100%; padding: 8px; border: 1px solid #555; border-radius: 4px; background: #2c2c2c; color: #e0e0e0;
+    }
+    button {
+      padding: 10px 15px; border: none; border-radius: 4px; background: #3498db; color: #fff; cursor: pointer; font-size: 16px;
+    }
+    button:hover { background: #2980b9; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #444; padding: 8px; text-align: center; }
+    th { background: #2c2c2c; }
+    /* Modal styling */
+    .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8); }
+    .modal-content { background-color: #1e1e1e; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 400px; border-radius: 8px; }
+    .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; }
+    .close:hover, .close:focus { color: #fff; text-decoration: none; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Traffic Light Configuration</h1>
+    <!-- Schedule Entry Form -->
+    <h2>Schedule Entry</h2>
+    <form id="scheduleForm">
+      <div class="form-row">
+        <div>
+          <label for="sched_index">Index</label>
+          <input type="number" id="sched_index" name="index" min="1" max="10" required>
+        </div>
+        <div>
+          <label for="hour">Hour</label>
+          <input type="number" id="hour" name="hour" min="0" max="23" required>
+        </div>
+        <div>
+          <label for="minute">Minute</label>
+          <input type="number" id="minute" name="minute" min="0" max="59" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label for="mode">Mode</label>
+          <select id="mode" name="mode">
+            <option value="NORMAL">NORMAL</option>
+            <option value="FLASHING">FLASHING</option>
+          </select>
+        </div>
+        <div>
+          <label for="sched_name">Schedule Name</label>
+          <input type="text" id="sched_name" name="name" placeholder="Default SCH[index]">
+        </div>
+      </div>
+      <button type="button" onclick="addSchedule()">Add Schedule</button>
+    </form>
+
+    <!-- Saved Schedules Table -->
+    <h2>Saved Schedules</h2>
+    <table id="scheduleTable">
+      <thead>
+        <tr>
+          <th>Index</th>
+          <th>Time</th>
+          <th>Mode</th>
+          <th>Name</th>
+          <th>Durations</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <button type="button" onclick="uploadSchedules()">Upload All Schedules</button>
+
+    <!-- Form for Set RTC -->
+    <h2>Set RTC</h2>
+    <form id="rtcForm" onsubmit="submitRTC(event)">
+      <div class="form-row">
+        <div>
+          <label for="rtc_date">Date</label>
+          <input type="date" id="rtc_date" name="date" required>
+        </div>
+        <div>
+          <label for="rtc_time">Time (HH:MM:SS)</label>
+          <input type="text" id="rtc_time" name="time" placeholder="Ex: 02:23:00" required>
+        </div>
+      </div>
+      <button type="submit">Set RTC</button>
+    </form>
+
+    <!-- Form for Set Active Intersections -->
+    <h2>Set Active Intersections</h2>
+    <form id="activeForm" onsubmit="submitActive(event)">
+      <div class="form-row">
+        <div>
+          <label for="active1">S1 (0/1)</label>
+          <input type="number" id="active1" name="active1" min="0" max="1" required>
+        </div>
+        <div>
+          <label for="active2">S2 (0/1)</label>
+          <input type="number" id="active2" name="active2" min="0" max="1" required>
+        </div>
+        <div>
+          <label for="active3">S3 (0/1)</label>
+          <input type="number" id="active3" name="active3" min="0" max="1" required>
+        </div>
+        <div>
+          <label for="active4">S4 (0/1)</label>
+          <input type="number" id="active4" name="active4" min="0" max="1" required>
+        </div>
+        <div>
+          <label for="active5">S5 (0/1)</label>
+          <input type="number" id="active5" name="active5" min="0" max="1" required>
+        </div>
+      </div>
+      <button type="submit">Set Active</button>
+    </form>
+
+    <!-- Modal for input durations (shown if mode NORMAL selected) -->
+    <div id="durationModal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h2>Enter Durations (sec)</h2>
+        <form id="durationForm">
+          <div class="form-row">
+            <div>
+              <label for="dur_green1">Green S1</label>
+              <input type="number" id="dur_green1" name="green1" min="0" required>
+            </div>
+            <div>
+              <label for="dur_green2">Green S2</label>
+              <input type="number" id="dur_green2" name="green2" min="0" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div>
+              <label for="dur_green3">Green S3</label>
+              <input type="number" id="dur_green3" name="green3" min="0" required>
+            </div>
+            <div>
+              <label for="dur_green4">Green S4</label>
+              <input type="number" id="dur_green4" name="green4" min="0" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div>
+              <label for="dur_green5">Green S5</label>
+              <input type="number" id="dur_green5" name="green5" min="0" required>
+            </div>
+            <div>
+              <label for="dur_yellow">Yellow</label>
+              <input type="number" id="dur_yellow" name="yellow" min="0" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div>
+              <label for="dur_allred">All Red</label>
+              <input type="number" id="dur_allred" name="allred" min="0" required>
+            </div>
+          </div>
+          <button type="button" onclick="saveDurations()">Save Durations</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Include MQTT.js library -->
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script>
+    // MQTT Setup: Hubungkan ke broker HiveMQ via WebSocket
+    const mqttClient = mqtt.connect('wss://broker.hivemq.com:8000/mqtt');
+    mqttClient.on('connect', function () {
+      console.log('Connected to MQTT Broker');
+      mqttClient.subscribe('traffic/control', function(err) {
+        if (!err) {
+          console.log('Subscribed to traffic/control');
+        }
+      });
+    });
+    mqttClient.on('message', function (topic, message) {
+      console.log('Received:', topic, message.toString());
+      // Kamu bisa menambahkan update UI jika diperlukan
+    });
+
+    // Array untuk menyimpan schedule yang diinput
+    let scheduleList = [];
+    function addSchedule() {
+      const index = document.getElementById('sched_index').value;
+      const hour = document.getElementById('hour').value;
+      const minute = document.getElementById('minute').value;
+      const mode = document.getElementById('mode').value;
+      let name = document.getElementById('sched_name').value;
+      if (!name) { name = 'SCH' + index; }
+      const schedule = { index, hour, minute, mode, name, durations: '' };
+      scheduleList.push(schedule);
+      if (mode === 'NORMAL') {
+        openModal();
+      } else {
+        updateScheduleTable();
+      }
+    }
+    function updateScheduleTable() {
+      let tableBody = document.getElementById('scheduleTable').getElementsByTagName('tbody')[0];
+      tableBody.innerHTML = '';
+      scheduleList.forEach(sch => {
+        let row = tableBody.insertRow();
+        row.insertCell(0).innerText = sch.index;
+        row.insertCell(1).innerText = sch.hour + ':' + sch.minute;
+        row.insertCell(2).innerText = sch.mode;
+        row.insertCell(3).innerText = sch.name;
+        row.insertCell(4).innerText = sch.durations;
+      });
+    }
+    // Modal functions
+    function openModal() { document.getElementById('durationModal').style.display = 'block'; }
+    function closeModal() { document.getElementById('durationModal').style.display = 'none'; }
+    function saveDurations() {
+      const green1 = document.getElementById('dur_green1').value;
+      const green2 = document.getElementById('dur_green2').value;
+      const green3 = document.getElementById('dur_green3').value;
+      const green4 = document.getElementById('dur_green4').value;
+      const green5 = document.getElementById('dur_green5').value;
+      const yellow = document.getElementById('dur_yellow').value;
+      const allred = document.getElementById('dur_allred').value;
+      let sch = scheduleList[scheduleList.length - 1];
+      sch.durations = green1 + ' ' + green2 + ' ' + green3 + ' ' + green4 + ' ' + green5 + ' ' + yellow + ' ' + allred;
+      updateScheduleTable();
+      closeModal();
+    }
+    // Upload schedules via MQTT
+    function uploadSchedules() {
+      scheduleList.forEach(sch => {
+        // Format perintah sesuai dengan kode di Arduino
+        const scheduleCmd = 'Set_schedule ' + sch.index + ' ' +
+                            (sch.hour.length === 1 ? '0' + sch.hour : sch.hour) + ':' +
+                            (sch.minute.length === 1 ? '0' + sch.minute : sch.minute) + ' ' +
+                            sch.mode + ' ' + sch.name;
+        console.log('Publishing:', scheduleCmd);
+        mqttClient.publish('traffic/control', scheduleCmd);
+        if (sch.mode === 'NORMAL' && sch.durations !== '') {
+          const parts = sch.durations.split(' ');
+          const durCmd = 'Set_sched_dur ' + sch.index + ' ' +
+                         parts[0] + ' ' + parts[1] + ' ' + parts[2] + ' ' + parts[3] + ' ' + parts[4] + ' ' + parts[5] + ' ' + parts[6];
+          console.log('Publishing:', durCmd);
+          mqttClient.publish('traffic/control', durCmd);
+        }
+      });
+      alert('Schedules uploaded via MQTT');
+    }
+    // RTC form submission via MQTT
+    function submitRTC(e) {
+      e.preventDefault();
+      const date = document.getElementById('rtc_date').value;
+      const time = document.getElementById('rtc_time').value;
+      const rtcCmd = 'Set_RTC ' + date + ' ' + time;
+      console.log('Publishing:', rtcCmd);
+      mqttClient.publish('traffic/control', rtcCmd);
+      alert('RTC command sent via MQTT');
+    }
+    // Active intersections form submission via MQTT
+    function submitActive(e) {
+      e.preventDefault();
+      const active1 = document.getElementById('active1').value;
+      const active2 = document.getElementById('active2').value;
+      const active3 = document.getElementById('active3').value;
+      const active4 = document.getElementById('active4').value;
+      const active5 = document.getElementById('active5').value;
+      const activeCmd = 'Set_active ' + active1 + ' ' + active2 + ' ' + active3 + ' ' + active4 + ' ' + active5;
+      console.log('Publishing:', activeCmd);
+      mqttClient.publish('traffic/control', activeCmd);
+      alert('Active intersections command sent via MQTT');
+    }
+  </script>
+</body>
+</html>
