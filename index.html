@@ -180,7 +180,7 @@
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <script>
     // MQTT Setup: Hubungkan ke broker HiveMQ via WebSocket
-    const mqttClient = mqtt.connect('wss://broker.hivemq.com:8000/mqtt');
+    const mqttClient = mqtt.connect('wss://broker.hivemq.com:8004/mqtt');
     mqttClient.on('connect', function () {
       console.log('Connected to MQTT Broker');
       mqttClient.subscribe('traffic/control', function(err) {
